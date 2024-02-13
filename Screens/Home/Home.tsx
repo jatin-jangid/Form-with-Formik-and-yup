@@ -11,6 +11,8 @@ import {
 } from 'react-native';
 import {Formik, FieldArray} from 'formik';
 import * as yup from 'yup';
+import DateTimePicker from '@react-native-community/datetimepicker';
+import {Picker} from '@react-native-picker/picker';
 
 interface Legs {
   DepartureLocation: string;
@@ -18,38 +20,99 @@ interface Legs {
   DepartureDate: string;
   NoOfPassengers: string;
 }
-interface FormErrors {
-  legs?: Array<{
-    DepartureLocation?: string;
-    ArrivalLocation?: string;
-    DepartureDate?: string;
-    NoOfPassengers?: string;
-  }>;
-}
+
+const today = new Date();
+today.setHours(0, 0, 0, 0);
 
 const legSchema = yup.object().shape({
   DepartureLocation: yup.string().required('Departure Location is required'),
-  ArrivalLocation: yup.string().required('Arrival Location is required'),
-  DepartureDate: yup.string().required('Departure Date is required'),
+  ArrivalLocation: yup
+    .string()
+    .required('Arrival Location is required')
+    .notOneOf(
+      [yup.ref('DepartureLocation'), null], // Compare against 'departureLocation'
+      'Arrival location cannot be the same as departure location',
+    ),
+  DepartureDate: yup
+    .date()
+    .required('Departure Date is required')
+    .min(new Date(), 'Departure date must be in the future'),
   NoOfPassengers: yup
     .number()
     .min(1, 'Number of Passengers should be at least 1')
     .required('Number of Passengers is required'),
+  // .matches(/^[0-9]+$/, 'Should be a number'),
 });
 
 const loginValidationSchema = yup.object().shape({
-  legs: yup.array().of(legSchema),
+  legs: yup
+    .array()
+    .of(legSchema)
+    .test(
+      'is-ascending',
+      'Dates must be in ascending order',
+      function (value: any) {
+        let isValid = true;
+        for (let i = 1; i < value.length; i++) {
+          if (
+            new Date(value[i].DepartureDate!) <
+            new Date(value[i - 1].DepartureDate!)
+          ) {
+            isValid = false;
+            break;
+          }
+        }
+        return isValid;
+      },
+    ),
 });
 
+const countries = [
+  'India',
+  'United States',
+  'Canada',
+  'United Kingdom',
+  'Australia',
+  'Germany',
+  'France',
+  'Italy',
+  'Spain',
+  'Japan',
+  'China',
+  'Brazil',
+  'India',
+  'Russia',
+  'South Korea',
+  'Mexico',
+  'Indonesia',
+  'Turkey',
+  'Netherlands',
+  'Saudi Arabia',
+  'Switzerland',
+  'Sweden',
+  'Belgium',
+  'Norway',
+  'Austria',
+  'Denmark',
+];
+
 export const Home = () => {
-  const [chosenDate, setChosenDate] = useState(new Date());
   const [modalVisible, setModalVisible] = useState<boolean>(false);
   const [formData, setFormData] = useState<Legs[]>([]);
+  const [showDatePicker, setShowDatePicker] = useState<boolean>(false);
+  const [chosenDates, setChosenDates] = useState<Date[]>([new Date()]);
 
   const handleSubmit = (values: {legs: Legs[]}) => {
     console.log(values, 'value');
-    setFormData(values.legs); // Store form data in state variable
-    setModalVisible(true); // Show modal when form is submitted
+    setFormData(values.legs);
+    setModalVisible(true);
+  };
+
+  const formatDate = (date: Date) => {
+    const day = date.getDate();
+    const month = date.getMonth() + 1;
+    const year = date.getFullYear().toString();
+    return `${day}/${month}/${year}`;
   };
 
   return (
@@ -66,6 +129,8 @@ export const Home = () => {
             },
           ],
         }}
+        validateOnChange={false}
+        validateOnBlur={false}
         onSubmit={handleSubmit}>
         {({
           handleChange,
@@ -73,6 +138,7 @@ export const Home = () => {
           handleSubmit,
           values,
           touched,
+          setFieldValue,
           isValid,
           errors,
           validateForm,
@@ -85,14 +151,26 @@ export const Home = () => {
                   <View>
                     {values.legs.map((leg, index) => (
                       <View key={index} style={styles.leg}>
-                        <TextInput
-                          style={styles.textInput}
-                          onChangeText={handleChange(
-                            `legs.${index}.DepartureLocation`,
-                          )}
-                          placeholder="Departure Location"
-                          value={leg.DepartureLocation}
-                        />
+                        <Picker
+                          selectedValue={leg.DepartureLocation}
+                          onValueChange={itemValue =>
+                            setFieldValue(
+                              `legs.${index}.DepartureLocation`,
+                              itemValue as string,
+                            )
+                          }>
+                          <Picker.Item
+                            label="Select Departure Country"
+                            value=""
+                          />
+                          {countries.map((country, idx) => (
+                            <Picker.Item
+                              key={idx}
+                              label={country}
+                              value={country}
+                            />
+                          ))}
+                        </Picker>
                         {errors.legs &&
                           errors.legs[index] &&
                           errors.legs[index].DepartureLocation && (
@@ -100,14 +178,26 @@ export const Home = () => {
                               {errors.legs[index].DepartureLocation}
                             </Text>
                           )}
-                        <TextInput
-                          style={styles.textInput}
-                          onChangeText={handleChange(
-                            `legs.${index}.ArrivalLocation`,
-                          )}
-                          placeholder="Arrival Location"
-                          value={leg.ArrivalLocation}
-                        />
+                        <Picker
+                          selectedValue={leg.ArrivalLocation}
+                          onValueChange={itemValue =>
+                            setFieldValue(
+                              `legs.${index}.ArrivalLocation`,
+                              itemValue as string,
+                            )
+                          }>
+                          <Picker.Item
+                            label="Select Arrival Country"
+                            value=""
+                          />
+                          {countries.map((country, idx) => (
+                            <Picker.Item
+                              key={idx}
+                              label={country}
+                              value={country}
+                            />
+                          ))}
+                        </Picker>
                         {errors.legs &&
                           errors.legs[index] &&
                           errors.legs[index].ArrivalLocation && (
@@ -115,14 +205,48 @@ export const Home = () => {
                               {errors.legs[index].ArrivalLocation}
                             </Text>
                           )}
-                        <TextInput
+                        <TouchableOpacity
                           style={styles.textInput}
-                          onChangeText={handleChange(
-                            `legs.${index}.DepartureDate`,
-                          )}
-                          placeholder="Departure Date"
-                          value={leg.DepartureDate}
-                        />
+                          onPress={() => {
+                            setShowDatePicker(true);
+                            setChosenDates(prevDates => {
+                              const newDates = [...prevDates];
+                              newDates[index] = leg.DepartureDate
+                                ? new Date(leg.DepartureDate)
+                                : new Date();
+                              return newDates;
+                            });
+                          }}>
+                          <Text>
+                            {' '}
+                            Select Date :{' '}
+                            {chosenDates[index]
+                              ? formatDate(chosenDates[index])
+                              : 'Select a date'}
+                          </Text>
+                        </TouchableOpacity>
+                        {showDatePicker && (
+                          <DateTimePicker
+                            value={chosenDates[index] || today}
+                            minimumDate={today}
+                            mode="date"
+                            display="default"
+                            onChange={(event, selectedDate) => {
+                              setShowDatePicker(false);
+                              if (selectedDate) {
+                                setChosenDates(prevDates => {
+                                  const newDates = [...prevDates];
+                                  newDates[index] = selectedDate;
+                                  return newDates;
+                                });
+                                setFieldValue(
+                                  `legs.${index}.DepartureDate`,
+                                  selectedDate.toISOString(),
+                                );
+                              }
+                            }}
+                          />
+                        )}
                         {errors.legs &&
                           errors.legs[index] &&
                           errors.legs[index].DepartureDate && (
@@ -132,6 +256,7 @@ export const Home = () => {
                           )}
                         <TextInput
                           style={styles.textInput}
+                          keyboardType="numeric"
                           onChangeText={handleChange(
                             `legs.${index}.NoOfPassengers`,
                           )}
@@ -145,46 +270,37 @@ export const Home = () => {
                               {errors.legs[index].NoOfPassengers}
                             </Text>
                           )}
-                        <TouchableOpacity
-                          style={styles.removeButton}
-                          onPress={() => arrayHelpers.remove(index)}>
-                          <Text style={styles.removeButtonText}>
-                            Remove Leg
-                          </Text>
-                        </TouchableOpacity>
-                        {/* <Button
-                      onPress={() => arrayHelpers.remove(index)}
-                      title="Remove Leg"
-                      color="red"
-                    /> */}
+                        {values.legs.length > 1 && (
+                          <TouchableOpacity
+                            style={styles.removeButton}
+                            onPress={() => arrayHelpers.remove(index)}>
+                            <Text style={styles.removeButtonText}>
+                              Remove Leg
+                            </Text>
+                          </TouchableOpacity>
+                        )}
                       </View>
                     ))}
-                    <TouchableOpacity
-                      style={styles.addLegButton}
-                      onPress={() =>
-                        arrayHelpers.push({
-                          DepartureLocation: '',
-                          ArrivalLocation: '',
-                          DepartureDate: '',
-                          NoOfPassengers: '',
-                        })
-                      }>
-                      <Text style={styles.buttonText}>Add Leg</Text>
-                    </TouchableOpacity>
-                    {/* <Button
-                  onPress={() =>
-                    arrayHelpers.push({
-                      DepartureLocation: '',
-                      ArrivalLocation: '',
-                      DepartureDate: '',
-                      NoOfPassengers: '',
-                    })
-                  }
-                  title="Add Leg"
-                /> */}
+                    {values.legs.length < 5 && (
+                      <TouchableOpacity
+                        style={styles.addLegButton}
+                        onPress={() =>
+                          arrayHelpers.push({
+                            DepartureLocation: '',
+                            ArrivalLocation: '',
+                            DepartureDate: '',
+                            NoOfPassengers: '',
+                          })
+                        }>
+                        <Text style={styles.buttonText}>Add Leg</Text>
+                      </TouchableOpacity>
+                    )}
                   </View>
                 )}
               />
+              {errors.legs && typeof errors.legs === 'string' && (
+                <Text style={{color: 'red'}}>{errors.legs}</Text>
+              )}
               <TouchableOpacity
                 style={styles.button}
                 onPress={() => {
@@ -193,14 +309,6 @@ export const Home = () => {
                 }}>
                 <Text style={styles.buttonText}>Submit</Text>
               </TouchableOpacity>
-              {/* <Button
-              onPress={() => {
-                handleSubmit();
-                validateForm();
-              }}
-              title="Submit"
-              color={'green'}
-            /> */}
             </ScrollView>
           </View>
         )}
@@ -274,7 +382,6 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
   },
   removeButtonText: {
-    // color: '#ffffff',
     color: 'black',
     fontSize: 14,
     fontWeight: '400',
@@ -285,7 +392,6 @@ const styles = StyleSheet.create({
     padding: 15,
     borderRadius: 10,
     alignItems: 'center',
-    // marginTop: 10,
     alignSelf: 'center',
   },
   button: {
@@ -298,7 +404,6 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
   },
   buttonText: {
-    // color: '#ffffff',
     color: 'black',
     fontSize: 18,
     fontWeight: '400',
@@ -317,8 +422,6 @@ const styles = StyleSheet.create({
     maxHeight: '80%',
   },
   modalTitle: {
-    color: 'black',
-
     fontSize: 20,
     fontWeight: 'bold',
     marginBottom: 10,
@@ -327,7 +430,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   closeButton: {
-    backgroundColor: 'lightpink',
+    backgroundColor: 'lightgrey',
     borderRadius: 5,
     padding: 10,
     alignItems: 'center',
@@ -335,150 +438,5 @@ const styles = StyleSheet.create({
   },
   closeButtonText: {
     fontSize: 16,
-    color: 'black',
-    fontWeight: '400',
   },
 });
-
-// import React, {useState} from 'react';
-// import {Button, StyleSheet, Text, TextInput, View} from 'react-native';
-// import {Formik} from 'formik';
-// import * as yup from 'yup';
-
-// const loginValidationSchema = yup.object().shape({
-//   DepartureLocation: yup
-//     .string()
-//     // .email('Please Enter Valid Email')
-//     .required('Departure Location address is required'),
-//   ArrivalLocation: yup
-//     .string()
-//     .min(8, 'Arrival Location must be minimum 8 characters')
-//     .required('Arrival Location is required'),
-//   DepartureDate: yup.string().required('Departure Date is Required'),
-//   NoOfPassengers: yup
-//     .number()
-//     .min(1, 'Should be atleast 1')
-//     .required('Number of Passengers is required'),
-// });
-
-// export const Home = () => {
-//   const [chosenDate, setChosenDate] = useState(new Date());
-//   return (
-//     <Formik
-//       validationSchema={loginValidationSchema}
-//       initialValues={{
-//         DepartureLocation: '',
-//         ArrivalLocation: '',
-//         DepartureDate: '',
-//         NoOfPassengers: '',
-//       }}
-//       onSubmit={values => console.log(values)}>
-//       {({
-//         handleChange,
-//         handleBlur,
-//         handleSubmit,
-//         values,
-//         touched,
-//         isValid,
-//         errors,
-//         validateForm, // Add validateForm function
-//       }) => (
-//         <View style={styles.container}>
-//           <View style={styles.leg}>
-//             <TextInput
-//               style={styles.textInput}
-//               onChangeText={handleChange('DepartureLocation')}
-//               placeholderTextColor={'black'}
-//               onBlur={handleBlur('DepartureLocation')}
-//               value={values.DepartureLocation}
-//               placeholder="Departure Location"
-//             />
-//             {/* Show errors for DepartureLocation */}
-//             {errors.DepartureLocation && touched.DepartureLocation && (
-//               <Text style={styles.errors}>{errors.DepartureLocation}</Text>
-//             )}
-//             {/* Add TextInput for ArrivalLocation */}
-//             <TextInput
-//               style={styles.textInput}
-//               onChangeText={handleChange('ArrivalLocation')}
-//               placeholderTextColor={'black'}
-//               onBlur={handleBlur('ArrivalLocation')}
-//               value={values.ArrivalLocation}
-//               placeholder="Arrival Location"
-//               secureTextEntry // Hide the input text for passwords
-//             />
-//             {/* Show errors for Arrival Location */}
-//             {errors.ArrivalLocation && touched.ArrivalLocation && (
-//               <Text style={styles.errors}>{errors.ArrivalLocation}</Text>
-//             )}
-//             {/* Add TextInput for Departure Date */}
-
-//             <TextInput
-//               style={styles.textInput}
-//               onChangeText={handleChange('DepartureDate')}
-//               placeholderTextColor={'black'}
-//               onBlur={handleBlur('DepartureDate')}
-//               value={values.DepartureDate}
-//               placeholder="Departure Date"
-//               secureTextEntry // Hide the input text for passwords
-//             />
-//             {/* Show errors for Departure Date */}
-//             {errors.DepartureDate && touched.DepartureDate && (
-//               <Text style={styles.errors}>{errors.DepartureDate}</Text>
-//             )}
-//             <TextInput
-//               style={styles.textInput}
-//               onChangeText={handleChange('NoOfPassengers')}
-//               onBlur={handleBlur('NoOfPassengers')}
-//               value={values.NoOfPassengers}
-//               placeholder="No Of Passengers"
-//               placeholderTextColor={'black'}
-//               secureTextEntry // Hide the input text for passwords
-//             />
-//             {/* Show errors for No Of Passengers */}
-//             {errors.NoOfPassengers && touched.NoOfPassengers && (
-//               <Text style={styles.errors}>{errors.NoOfPassengers}</Text>
-//             )}
-//           </View>
-//           <View style={{margin: 10}}>
-//             <Button
-//               onPress={() => {
-//                 handleSubmit();
-//                 validateForm();
-//               }}
-//               title="Submit"
-//             />
-//           </View>
-//         </View>
-//       )}
-//     </Formik>
-//   );
-// };
-
-// export default Home;
-
-// const styles = StyleSheet.create({
-//   container: {
-//     flex: 1,
-//     // padding: 10,
-//   },
-//   errors: {
-//     fontSize: 14,
-//     color: 'red',
-//     fontWeight: 'bold',
-//     margin: 5,
-//   },
-//   textInput: {
-//     borderRadius: 10,
-//     borderWidth: 1,
-//     borderColor: 'black',
-//     margin: 5,
-//     padding: 10,
-//   },
-//   leg: {
-//     backgroundColor: 'lightgrey',
-//     padding: 20,
-//     borderRadius: 10,
-//     margin: 10,
-//   },
-// });
