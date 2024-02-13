@@ -13,6 +13,7 @@ import {Formik, FieldArray} from 'formik';
 import * as yup from 'yup';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import {Picker} from '@react-native-picker/picker';
+import Autocomplete from '../../Components/AutoComplete';
 
 interface Legs {
   DepartureLocation: string;
@@ -80,7 +81,6 @@ const countries = [
   'Japan',
   'China',
   'Brazil',
-  'India',
   'Russia',
   'South Korea',
   'Mexico',
@@ -151,7 +151,7 @@ export const Home = () => {
                   <View>
                     {values.legs.map((leg, index) => (
                       <View key={index} style={styles.leg}>
-                        <Picker
+                        {/* <Picker
                           selectedValue={leg.DepartureLocation}
                           onValueChange={itemValue =>
                             setFieldValue(
@@ -170,15 +170,31 @@ export const Home = () => {
                               value={country}
                             />
                           ))}
-                        </Picker>
+                        </Picker> */}
+                        <Autocomplete
+                          style={styles.autoComplete}
+                          data={countries}
+                          value={leg.DepartureLocation}
+                          onChange={(text: any) =>
+                            setFieldValue(
+                              `legs[${index}].departureLocation`,
+                              text,
+                            )
+                          }
+                          label="Departure Location"
+                          menuStyle={{backgroundColor: 'white'}}
+                          containerStyle={{}} // onChange={() => {}}
+                        />
                         {errors.legs &&
                           errors.legs[index] &&
+                          //@ts-ignore
                           errors.legs[index].DepartureLocation && (
                             <Text style={styles.errors}>
+                              {/* @ts-ignore */}
                               {errors.legs[index].DepartureLocation}
                             </Text>
                           )}
-                        <Picker
+                        {/* <Picker
                           selectedValue={leg.ArrivalLocation}
                           onValueChange={itemValue =>
                             setFieldValue(
@@ -197,11 +213,27 @@ export const Home = () => {
                               value={country}
                             />
                           ))}
-                        </Picker>
+                        </Picker> */}
+                        <Autocomplete
+                          style={styles.autoComplete}
+                          data={countries}
+                          value={leg.ArrivalLocation}
+                          onChange={(text: any) =>
+                            setFieldValue(
+                              `legs[${index}].ArrivalLocation`,
+                              text,
+                            )
+                          }
+                          label="Arrival Location"
+                          menuStyle={{backgroundColor: 'white'}}
+                          containerStyle={{}} // onChange={() => {}}
+                        />
                         {errors.legs &&
                           errors.legs[index] &&
+                          //@ts-ignore
                           errors.legs[index].ArrivalLocation && (
                             <Text style={styles.errors}>
+                              {/* @ts-ignore */}
                               {errors.legs[index].ArrivalLocation}
                             </Text>
                           )}
@@ -249,8 +281,10 @@ export const Home = () => {
                         )}
                         {errors.legs &&
                           errors.legs[index] &&
+                          //@ts-ignore
                           errors.legs[index].DepartureDate && (
                             <Text style={styles.errors}>
+                              {/* @ts-ignore */}
                               {errors.legs[index].DepartureDate}
                             </Text>
                           )}
@@ -270,8 +304,10 @@ export const Home = () => {
                         />
                         {errors.legs &&
                           errors.legs[index] &&
+                          //@ts-ignore
                           errors.legs[index].NoOfPassengers && (
                             <Text style={styles.errors}>
+                              {/* @ts-ignore */}
                               {errors.legs[index].NoOfPassengers}
                             </Text>
                           )}
@@ -369,6 +405,13 @@ const styles = StyleSheet.create({
     borderColor: 'black',
     marginVertical: 5,
     padding: 10,
+  },
+  autoComplete: {
+    borderRadius: 10,
+    // borderWidth: 1,
+    // borderColor: 'black',
+    marginVertical: 5,
+    backgroundColor: 'transparent',
   },
   leg: {
     backgroundColor: '#c4c4c4',
