@@ -257,9 +257,14 @@ export const Home = () => {
                         <TextInput
                           style={styles.textInput}
                           keyboardType="numeric"
-                          onChangeText={handleChange(
-                            `legs.${index}.NoOfPassengers`,
-                          )}
+                          onChangeText={text => {
+                            // Regular expression to match only numbers
+                            const numericInput = text.replace(/[^0-9]/g, '');
+                            // Update the field value with the cleaned numeric input
+                            handleChange(`legs.${index}.NoOfPassengers`)(
+                              numericInput,
+                            );
+                          }}
                           placeholder="No Of Passengers"
                           value={leg.NoOfPassengers}
                         />
